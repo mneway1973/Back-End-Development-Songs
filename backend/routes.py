@@ -51,3 +51,76 @@ def parse_json(data):
 ######################################################################
 # INSERT CODE HERE
 ######################################################################
+@app.route("/health")
+def healthz():
+    return jsonify(dict(status="OK")), 200
+
+@app.route("/count")
+def count():
+    """return length of data"""
+    count = db.songs.count_documents({})
+
+    return {"count": count}, 200
+
+@app.route("/song", methods=["GET"])
+def songs():
+    """return the song"""
+    results = list(db.songs.find({}))
+
+    return {"songs": parse_json(results)}, 200
+
+@app.route("/song/<int:id>", methods=["GET"])
+def get_song_by_id(id):
+    """return the individual song"""
+    result = db.songs.find_one({"id": id})
+
+    if not result:
+         return {"message": f"song with id {ID }not found"} , 404
+    return {"songs": parse_json(result)}, 200
+
+@app.route("/song", methods=["POST"])
+def create_song():
+
+    """extract the song data from request"""
+    song_in = request.json
+    print(song_in["id"])
+    
+    results = db.songs.find({})
+
+    for song in results:
+        if song_in["id"] == song["id"]:
+            return {
+                "Message": "song with id already present"
+            }, 302
+    db.songs.insert_one(song_in)
+    return {"songs": parse_json(song_in)}, 201
+
+
+@app.route("/song/<int:id>", methods=["PUT"])
+def update_song(id):
+
+    # get data from the json body
+    song_in = request.json
+
+    song = db.songs.find_one({"id": id})
+
+    if song == None:
+        return {"message": "song not found"}, 404
+
+    updated_data = {"$set": song_in}
+
+    result = db.songs.update_one({"id": id}, updated_data)
+
+    if result.modified_count == 0:
+        return {"message": "song found, but nothing updated"}, 200
+    else:
+        return parse_json(db.songs.find_one({"id": id})), 201
+
+@app.route("/song/<int:id>", methods=["DELETE"])
+def delete_song(id):
+
+    result = db.songs.delete_one({"id": id})
+    if result.deleted_count == 0:
+        return {"message": "song not found"}, 404
+    else:
+        return "", 204
